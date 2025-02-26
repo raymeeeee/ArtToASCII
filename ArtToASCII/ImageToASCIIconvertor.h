@@ -12,7 +12,7 @@ using namespace cv;
 using namespace std;
 
 
-const int nwidth = 1200; // width // resolution
+int nwidth = 400; // width // resolution
 const float aspect = 11.0 / 24.0; // aspect pixel to ascii
 string gradient = " .:!/r(lZ4H9W8$@"; //shadowing // "     .:!/r(lZ4H9W8$@" adding spaces causes shadow increasing
 

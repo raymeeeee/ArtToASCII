@@ -2,12 +2,13 @@
 
 int main(void)
 {
-	 
-	string path = "C:\\Users\\valer\\Desktop\\Files\\Pictures\\photo_2023-12-09_18-10-14.jpg"; // photo directory
+	
+	string path = "C:\\Users\\valer\\Desktop\\f5d1b5978490f06a91e998a171f281ae.jpg"; // photo directory
 	Mat image = imread(path, IMREAD_COLOR);
 	
 	Size sz = image.size();
-
+	//nwidth = sz.width;
+	nwidth = 1000;
 	//rescaling
 	int rows = sz.width, cols = sz.height;
 	float imasp = (float)rows / nwidth;
@@ -21,7 +22,7 @@ int main(void)
 
 	//cout << rows << " " << cols << endl;
 
-	int scale = 4; //SCALExSCALE pixel square // reduction size
+	int scale = 1; //SCALExSCALE pixel square // reduction size
 
 	int scaledRows = rows / scale;
 	int scaledCols = cols / scale;
