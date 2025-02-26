@@ -3,7 +3,7 @@
 int main(void)
 {
 	 
-	string path = "C:\\Users\\valer\\Desktop\\Files\\Pictures\\260px-OP_C016_rei.jpg"; // photo directory
+	string path = "C:\\Users\\valer\\Desktop\\Files\\Pictures\\photo_2023-12-09_18-10-14.jpg"; // photo directory
 	Mat image = imread(path, IMREAD_COLOR);
 	
 	Size sz = image.size();
@@ -21,7 +21,7 @@ int main(void)
 
 	//cout << rows << " " << cols << endl;
 
-	int scale = 1; //SCALExSCALE pixel square // reduction size
+	int scale = 4; //SCALExSCALE pixel square // reduction size
 
 	int scaledRows = rows / scale;
 	int scaledCols = cols / scale;
