@@ -1,14 +1,18 @@
 ﻿#include "ImageToASCIIconvertor.h"
 
+
+
 int main(void)
 {
-	
-	string path = "C:\\Users\\valer\\Desktop\\f5d1b5978490f06a91e998a171f281ae.jpg"; // photo directory
+	string path;
+	cout << "Input path to the file: " << endl;
+	cin >> path;
+	//string path = R"(C:\Users\valer\Desktop\Files\Pictures\photo_10_2025-04-21_03-49-02.jpg)"; // photo directory
+
 	Mat image = imread(path, IMREAD_COLOR);
 	
 	Size sz = image.size();
-	//nwidth = sz.width;
-	nwidth = 1000;
+
 	//rescaling
 	int rows = sz.width, cols = sz.height;
 	float imasp = (float)rows / nwidth;
@@ -29,9 +33,18 @@ int main(void)
 
 	//cout << scaledRows << " " << scaledCols << endl;
 	
-	Sleep(2000); // TIME TO RESCALE CONSOLE TO MAXIMUM // IF NOT DONE THE IMAGE WILL BE TEARED
+	// IMPORTANT
+	Sleep(2000); // TIME TO RESCALE CONSOLE TO MAXIMUM // IF NOT DONE THE IMAGE WILL BE TEARED //
+	// IMPORTANT
+
+#if MODE != 1
 	cout << "\033[2J\033[H"; // Clear screen and move cursor to top-left
+	convertToASCII(image, scaledRows, scaledCols, scale);
+#endif
+
+#if MODE == 1
 	printMatrix(convertToASCII(image, scaledRows, scaledCols, scale));
+#endif
 	
 	return 0;
 }
