@@ -6,6 +6,7 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 #include <vector>
+#include <stdexcept>
 
 #include <filesystem>
 using namespace std::filesystem;
@@ -13,7 +14,7 @@ using namespace std::filesystem;
 using namespace cv;
 using namespace std;
 
-#define MODE 3
+//#define MODE 1
 
 //1 - default ascii
 //2 - red + default ascii
@@ -21,7 +22,7 @@ using namespace std;
 
 
 //DEFAULT ASCII
-int nwidth = 600; // width // resolution
+//int nwidth = 200; // width // resolution
 const float aspect = 11.0 / 24.0; // aspect pixel to ascii;
 const string gradient = " .:!/r(l24H9W8$@"; //shadowing // "     .:!/r(lZ4H9W8$@" adding spaces causes shadow increasing
 
@@ -29,12 +30,7 @@ const string gradient = " .:!/r(l24H9W8$@"; //shadowing // "     .:!/r(lZ4H9W8$@
 //JAPANESE
 //const float aspect = 1; // aspect pixel to ascii;
 //const vector<string> gradient = {
-//	u8"・", u8"。", u8"、", u8"〃", u8"〄",
-//	u8"々", u8"〆", u8"〇", u8"〒", u8"〓",
-//	u8"〠", u8"〰", u8"〱", u8"〲", u8"〳",
-//	u8"〴", u8"〵", u8"〶", u8"〷", u8"〸",
-//	u8"〹", u8"〺", u8"〻", u8"〼", u8"〽",
-//	u8"〾", u8"〿", u8"あ", u8"い", u8"う",
+//	u8"〾", u8"あ", u8"い", u8"う",
 //	u8"え", u8"お", u8"か", u8"き", u8"く",
 //	u8"け", u8"こ", u8"漢", u8"字", u8"読",
 //	u8"書", u8"語", u8"文", u8"章", u8"学"
@@ -91,15 +87,18 @@ bool isRedRGB(int red, int green, int blue, float min_saturation = 0.4f,
 }
 
 
-vector<vector<string>> convertToASCII(Mat image, int scaledRows, int scaledCols, int scale = 1) {
+vector<vector<string>> convertToASCII(Mat image, int scaledRows, int scaledCols, int scale = 1, int mode = 1) {
+
+	if (mode != 1 && mode != 2 && mode != 3) { throw invalid_argument("Negative value not allowed."); }
+
 	SetConsoleOutputCP(65001); //for japanese chars
 	vector<vector<string>> ascii(scaledRows, vector<string>(scaledCols, " "));
-#if MODE != 1
-	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-	DWORD mode = 0;
-	GetConsoleMode(hConsole, &mode);
-	SetConsoleMode(hConsole, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
-#endif
+	if (mode != 1) {
+		HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+		DWORD mode = 0;
+		GetConsoleMode(hConsole, &mode);
+		SetConsoleMode(hConsole, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+	}
 
 	if (scale == 1) {
 		for (int i = 0, x = 0; x < scaledRows; i += scale, x++) {
@@ -112,38 +111,37 @@ vector<vector<string>> convertToASCII(Mat image, int scaledRows, int scaledCols,
 				int b = pixel[0];
 
 				int grayscale = round((r + g + b) / 3.0);
+				if(mode==1){
 
-#if MODE == 1
-				
-				ascii[x][y] = gradient[grayscale / gradient.size()];
-#endif
+					ascii[x][y] = gradient[grayscale / gradient.size()];
 
-#if MODE == 2
-				int colorRed = isRedRGB(r, g, b);
-				ascii[x][y] = gradient[grayscale / gradient.size()];
-				if (colorRed) {
-					string colorConsole = "\x1b[38;2;" + to_string(r) + ";" + to_string(g) + ";" + to_string(b) + "m";
+				}
+				else if (mode == 2) {
+					int colorRed = isRedRGB(r, g, b);
+					ascii[x][y] = gradient[grayscale / gradient.size()];
+					if (colorRed) {
+						string colorConsole = "\x1b[38;2;" + to_string(r) + ";" + to_string(g) + ";" + to_string(b) + "m";
+						cout << colorConsole;
+						cout << ascii[x][y];
+					}
+					else {
+						cout << "\x1b[38;2;255;255;255m";
+						cout << ascii[x][y];
+					}
+					
+				}
+				else if (mode == 3) {
+					string colorConsole = "\x1b[38;2;" + to_string(pixel[2]) + ";" + to_string(pixel[1]) + ";" + to_string(pixel[0]) + "m";
+					ascii[x][y] = gradient[grayscale / gradient.size()];
 					cout << colorConsole;
 					cout << ascii[x][y];
-				}
-				else {
-					cout << "\x1b[38;2;255;255;255m";
-					cout << ascii[x][y];
-				}
-#endif
 
-#if MODE == 3
-
-				string colorConsole = "\x1b[38;2;" + to_string(pixel[2]) + ";" + to_string(pixel[1]) + ";" + to_string(pixel[0]) + "m";
-				ascii[x][y] = gradient[grayscale / gradient.size()];
-				cout << colorConsole;
-				cout << ascii[x][y];
-#endif
+				}
 
 			}
-#if MODE != 1
-			cout << endl;
-#endif
+			if (mode != 1) {
+				cout << endl;
+			}
 		}
 		return ascii;
 	}
@@ -190,37 +188,38 @@ vector<vector<string>> convertToASCII(Mat image, int scaledRows, int scaledCols,
 			g /= pixelCount;
 			b /= pixelCount;
 
-#if MODE == 1
-			ascii[x][y] = gradient[grayscale / gradient.size()];
-#endif
+			if (mode == 1) {
+				ascii[x][y] = gradient[grayscale / gradient.size()];
+			}
 
-#if MODE == 2
-			int colorRed = isRedRGB(r,g,b);
-			ascii[x][y] = gradient[grayscale / gradient.size()];
-			if (colorRed) {
+			else if (mode == 2) {
+				int colorRed = isRedRGB(r, g, b);
+				ascii[x][y] = gradient[grayscale / gradient.size()];
+				if (colorRed) {
+					string colorConsole = "\x1b[38;2;" + to_string(r) + ";" + to_string(g) + ";" + to_string(b) + "m";
+					cout << colorConsole;
+					cout << ascii[x][y];
+				}
+				else {
+					cout << "\x1b[38;2;255;255;255m";
+					cout << ascii[x][y];
+				}
+			}
+			
+
+			else if (mode == 3) {
 				string colorConsole = "\x1b[38;2;" + to_string(r) + ";" + to_string(g) + ";" + to_string(b) + "m";
+				ascii[x][y] = gradient[grayscale / gradient.size()];
 				cout << colorConsole;
 				cout << ascii[x][y];
 			}
-			else {
-				cout << "\x1b[38;2;255;255;255m";
-				cout << ascii[x][y];
-			}
+			
 
-
-#endif
-
-#if MODE == 3
-			string colorConsole = "\x1b[38;2;" + to_string(r) + ";" + to_string(g) + ";" + to_string(b) + "m";
-			ascii[x][y] = gradient[grayscale / gradient.size()];
-			cout << colorConsole;
-			cout << ascii[x][y];
-#endif
 			
 		}
-#if MODE != 1
-		cout << endl;
-#endif
+		if (mode != 1) {
+			cout << endl;
+		}
 	}
 
 	return ascii;
