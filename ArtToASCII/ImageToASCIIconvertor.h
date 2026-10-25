@@ -69,157 +69,98 @@ tuple<double, double, double> RGBtoHSV(int red, int green, int blue) {
 bool isRedRGB(int red, int green, int blue, float min_saturation = 0.4f,
 	float min_value = 0.3f,
 	float hue_range = 20.0f) {
-	// Преобразуем RGB в HSV
+	// convert RGB to HSV
 	auto [h, s, v] = RGBtoHSV(red, green, blue);
 
-	// Красный цвет находится около 0° и 360° в HSV
-	// Мы проверяем два диапазона с учетом заданного диапазона оттенков
+	// red color is between 0° and 360° in HSV
+	// check to areas with given range
 	bool is_red_hue = (h <= hue_range) || (h >= 360.0f - hue_range);
 
-	// Проверяем минимальную насыщенность и яркость
+	// check minimal saturation and brightness
 	bool is_saturated = s >= min_saturation;
 	bool is_bright = v >= min_value;
 
-	// Также можно добавить проверку, что красный компонент преобладает
+	// check that red is dominant
 	bool red_dominant = (red > green * 1.5f) && (red > blue * 1.5f);
 
 	return is_red_hue && is_saturated && is_bright && red_dominant;
 }
 
 
-vector<vector<string>> convertToASCII(Mat image, int scaledRows, int scaledCols, int scale = 1, int mode = 1) {
+vector<vector<string>> convertToASCII(const Mat& image, int scaledRows, int scaledCols, int scale = 1, int mode = 1) {
 
-	if (mode != 1 && mode != 2 && mode != 3) { throw invalid_argument("Negative value not allowed."); }
+	if (mode != 1 && mode != 2 && mode != 3) { throw invalid_argument("Mode must be 1, 2 or 3"); }
 
-	SetConsoleOutputCP(65001); //for japanese chars
+	//SetConsoleOutputCP(65001); //for japanese char
+
 	vector<vector<string>> ascii(scaledRows, vector<string>(scaledCols, " "));
-	if (mode != 1) {
+
+	if (mode == 2 || mode == 3) { // allows console to be colored
 		HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-		DWORD mode = 0;
-		GetConsoleMode(hConsole, &mode);
-		SetConsoleMode(hConsole, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+		DWORD consoleMode = 0;
+		GetConsoleMode(hConsole, &consoleMode);
+		SetConsoleMode(hConsole, consoleMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 	}
 
-	if (scale == 1) {
-		for (int i = 0, x = 0; x < scaledRows; i += scale, x++) {
-			for (int j = 0, y = 0; y < scaledCols; j += scale, y++) {
-
-				//if scale == 1
-				Vec3b pixel = image.at<Vec3b>(i, j);
-				int r = pixel[2];
-				int g = pixel[1];
-				int b = pixel[0];
-
-				int grayscale = round((r + g + b) / 3.0);
-				if(mode==1){
-
-					ascii[x][y] = gradient[grayscale / gradient.size()];
-
-				}
-				else if (mode == 2) {
-					int colorRed = isRedRGB(r, g, b);
-					ascii[x][y] = gradient[grayscale / gradient.size()];
-					if (colorRed) {
-						string colorConsole = "\x1b[38;2;" + to_string(r) + ";" + to_string(g) + ";" + to_string(b) + "m";
-						cout << colorConsole;
-						cout << ascii[x][y];
-					}
-					else {
-						cout << "\x1b[38;2;255;255;255m";
-						cout << ascii[x][y];
-					}
-					
-				}
-				else if (mode == 3) {
-					string colorConsole = "\x1b[38;2;" + to_string(pixel[2]) + ";" + to_string(pixel[1]) + ";" + to_string(pixel[0]) + "m";
-					ascii[x][y] = gradient[grayscale / gradient.size()];
-					cout << colorConsole;
-					cout << ascii[x][y];
-
-				}
-
-			}
-			if (mode != 1) {
-				cout << endl;
-			}
-		}
-		return ascii;
-	}
-
-	//else
 	for (int i = 0, x = 0; x < scaledRows; i += scale, x++) {
 		for (int j = 0, y = 0; y < scaledCols; j += scale, y++) {
 
-			//taking pixels
-			//if scale > 1
-
-			int grayscale = 0;
-
-			int r = 0;
-			int g = 0;
-			int b = 0;
-
+			// --- avg color of block scale x scale ---
+			int r = 0, g = 0, b = 0;
 			int pixelCount = 0;
+
 			for (int m = 0; m < scale; m++) {
-				int color = 0;
 				for (int n = 0; n < scale; n++) {
-					if (i + m >= image.size().height - 1 || j + n >= image.size().width - 1) {
-						color = 0;
+					if (i + m >= image.rows || j + n >= image.cols) {
+						continue; // check if pixel is out of bounds
 					}
-					else {
-						pixelCount++;
-						Vec3b pixel = image.at<Vec3b>(i + m, j + n);
-						color = round((pixel[0] + pixel[1] + pixel[2]) / 3.0);
-
-						r += pixel[2];
-						g += pixel[1];
-						b += pixel[0];
-
-
-					}
-
+					Vec3b pixel = image.at<Vec3b>(i + m, j + n);
+					b += pixel[0];
+					g += pixel[1];
+					r += pixel[2];
+					pixelCount++;
 				}
-				grayscale += color;
 			}
 
-			//avg color if scale > 1
-			grayscale /= pixelCount;
+			// if whole block is out of bounds
+			if (pixelCount == 0) {
+				ascii[x][y] = " ";
+				if (mode == 2 || mode == 3) cout << ' ';
+				continue;
+			}
+
+			// avg value of r g b of pixels
 			r /= pixelCount;
 			g /= pixelCount;
 			b /= pixelCount;
 
-			if (mode == 1) {
-				ascii[x][y] = gradient[grayscale / gradient.size()];
-			}
+			int grayscale = (r + g + b) / 3; // 0..255
 
-			else if (mode == 2) {
-				int colorRed = isRedRGB(r, g, b);
-				ascii[x][y] = gradient[grayscale / gradient.size()];
-				if (colorRed) {
-					string colorConsole = "\x1b[38;2;" + to_string(r) + ";" + to_string(g) + ";" + to_string(b) + "m";
-					cout << colorConsole;
-					cout << ascii[x][y];
+			// --- choose of symbol ---
+			ascii[x][y] = gradient[grayscale * (gradient.size() - 1) / 255];
+
+			// --- immediate colored output ---
+			if (mode == 2) {
+				if (isRedRGB(r, g, b)) {
+					cout << "\x1b[38;2;" << r << ";" << g << ";" << b << "m";
 				}
 				else {
 					cout << "\x1b[38;2;255;255;255m";
-					cout << ascii[x][y];
 				}
-			}
-			
-
-			else if (mode == 3) {
-				string colorConsole = "\x1b[38;2;" + to_string(r) + ";" + to_string(g) + ";" + to_string(b) + "m";
-				ascii[x][y] = gradient[grayscale / gradient.size()];
-				cout << colorConsole;
 				cout << ascii[x][y];
 			}
-			
+			else if (mode == 3) {
+				cout << "\x1b[38;2;" << r << ";" << g << ";" << b << "m";
+				cout << ascii[x][y];
+			}
+		}
+		if (mode == 2 || mode == 3) {
+			cout << '\n';
+		}
+	}
 
-			
-		}
-		if (mode != 1) {
-			cout << endl;
-		}
+	if (mode == 2 || mode == 3) {
+		cout << "\x1b[0m"; // console color reset
 	}
 
 	return ascii;
